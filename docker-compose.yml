@@ -1,0 +1,57 @@
+version: "3.8"
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: ecosort-mongo
+    restart: unless-stopped
+    ports:
+      - "27019:27017"
+    volumes:
+      - ecosort_mongo_data:/data/db
+    networks:
+      - ecosort-net
+
+  backend:
+    build: ./backend
+    container_name: ecosort-backend
+    restart: unless-stopped
+    ports:
+      - "8002:8002"
+    env_file:
+      - ./backend/.env
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017
+      - MONGODB_DB=ecosort
+    volumes:
+      - ./backend/uploads:/app/uploads
+      - ./backend/models:/app/models
+    depends_on:
+      - mongodb
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - ecosort-net
+
+  frontend:
+    build: ./frontend
+    container_name: ecosort-frontend
+    restart: unless-stopped
+    ports:
+      - "3002:80"
+    depends_on:
+      - backend
+    networks:
+      - ecosort-net
+
+volumes:
+  ecosort_mongo_data:
+
+networks:
+  ecosort-net:
+    driver: bridge
