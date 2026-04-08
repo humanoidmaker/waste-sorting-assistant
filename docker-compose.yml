@@ -1,33 +1,13 @@
 version: "3.8"
-
 services:
-  mongodb:
-    image: mongo:7
-    container_name: ecosort-mongo
-    restart: unless-stopped
-    ports:
-      - "27019:27017"
-    volumes:
-      - ecosort_mongo_data:/data/db
-    networks:
-      - ecosort-net
-
   backend:
     build: ./backend
-    container_name: ecosort-backend
-    restart: unless-stopped
-    ports:
-      - "8002:8002"
-    env_file:
-      - ./backend/.env
+    ports: ["8000:8000"]
     environment:
-      - MONGODB_URL=mongodb://mongodb:27017
-      - MONGODB_DB=ecosort
-    volumes:
-      - ./backend/uploads:/app/uploads
-      - ./backend/models:/app/models
-    depends_on:
-      - mongodb
+      - MONGODB_URI=mongodb://mongo:27017/waste_sorting_assistant
+      - JWT_SECRET=change-in-production
+      - CORS_ORIGINS=http://localhost:3000
+    depends_on: [mongo]
     deploy:
       resources:
         reservations:
@@ -35,23 +15,19 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-    networks:
-      - ecosort-net
+    restart: unless-stopped
 
   frontend:
     build: ./frontend
-    container_name: ecosort-frontend
+    ports: ["3000:3000"]
+    depends_on: [backend]
     restart: unless-stopped
-    ports:
-      - "3002:80"
-    depends_on:
-      - backend
-    networks:
-      - ecosort-net
+
+  mongo:
+    image: mongo:7
+    ports: ["27017:27017"]
+    volumes: [mongo_data:/data/db]
+    restart: unless-stopped
 
 volumes:
-  ecosort_mongo_data:
-
-networks:
-  ecosort-net:
-    driver: bridge
+  mongo_data:
